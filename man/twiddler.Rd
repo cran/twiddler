@@ -1,7 +1,9 @@
 \name{twiddler}
 \alias{twiddle}
 \title{Interactive manipulation of R expressions...}
-\usage{twiddle(expr, ..., eval=TRUE, auto=TRUE)
+\usage{twiddle(expr, ..., eval=TRUE, auto=TRUE, envir=parent.frame(), enclos=if
+    (is.list(envir) || is.pairlist(envir)) parent.frame() else
+    baseenv())
 }
 \description{Interactive manipulation of R expressions}
 \details{\code{twiddle} automatically creates a GUI for interactively manipulating
@@ -10,6 +12,9 @@ control, i.e. a slider or a checkbox, for every unbound variable in \code{expr}.
 \code{expr} is re-evaluated every time the user changes a control after binding
 the unbound variables in \code{expr} to the new settings of their associated
 controls. This allows easy interactive exploration of parameter spaces.}
+\note{If you use an \code{expr} that generates console output as a side-effect, e.g.
+via \code{\link{print}}, and you are running Windows, you might need to use
+\code{\link{twiddle_print}} to see the output in realtime.}
 \value{The last values of the twiddlers as a named list.}
 \seealso{\code{\link{knob}}, \code{\link{combo}}, and \code{\link{toggle}}}
 \arguments{\item{expr}{The expression to manipulate through GUI controls. A control is
@@ -21,6 +26,12 @@ added to the GUI to trigger manual evaluation.}
 \item{auto}{If set to \code{FALSE}, no controls for unbound variables will
 be created automatically. Unbound variables in \code{expr} will remain
 unbound, unless explicitly bound in the \code{...} parameter.}
+\item{envir}{The environment in which \code{expr} is to be evaluated. May also be
+\code{NULL}, a list, a data frame, a pairlist or an integer as specified to
+\code{\link{sys.call}}.}
+\item{enclos}{Relevant when \code{envir} is a (pair)list or a data frame. Specifies
+the enclosure, i.e., where R looks for objects not found in \code{envir}. This can
+be \code{NULL} (interpreted as the base package environment) or an environment.}
 \item{...}{Optional configuration information for the controls for unbound
 variables in \code{expr}. This information is supplied in the form
 \emph{variable_name} \code{=} \emph{twiddlerControl}, ... (e.g.

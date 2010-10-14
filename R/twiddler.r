@@ -13,6 +13,9 @@
 ##' \code{expr} is re-evaluated every time the user changes a control after binding
 ##' the unbound variables in \code{expr} to the new settings of their associated
 ##' controls. This allows easy interactive exploration of parameter spaces.
+##' @note If you use an \code{expr} that generates console output as a side-effect, e.g.
+##'   via \code{\link{print}}, and you are running Windows, you might need to use
+##'   \code{\link{twiddle_print}} to see the output in realtime.
 ##' @param expr The expression to manipulate through GUI controls. A control is
 ##'   automatically created for every variable in \code{expr} that is not
 ##'   bound in the caller's environment, unless \code{auto} is set to \code{FALSE}.
@@ -22,6 +25,12 @@
 ##' @param auto If set to \code{FALSE}, no controls for unbound variables will
 ##'   be created automatically. Unbound variables in \code{expr} will remain
 ##'   unbound, unless explicitly bound in the \code{...} parameter.
+##' @param envir The environment in which \code{expr} is to be evaluated. May also be
+##'   \code{NULL}, a list, a data frame, a pairlist or an integer as specified to
+##'   \code{\link{sys.call}}.
+##' @param enclos Relevant when \code{envir} is a (pair)list or a data frame. Specifies
+##'   the enclosure, i.e., where R looks for objects not found in \code{envir}. This can
+##'   be \code{NULL} (interpreted as the base package environment) or an environment.
 ##' @param ... Optional configuration information for the controls for unbound
 ##'   variables in \code{expr}. This information is supplied in the form
 ##'   \emph{variable_name} \code{=} \emph{twiddlerControl}, ... (e.g.
@@ -47,7 +56,11 @@
 ##' @seealso \code{\link{knob}}, \code{\link{combo}}, and \code{\link{toggle}}
 ##' @rdname twiddler
 ##' @export
-twiddle <- function(expr, ..., eval = TRUE, auto = TRUE) {
+twiddle <- function(expr, ...,
+                    eval = TRUE, auto = TRUE,
+                    envir = parent.frame(),
+                    enclos = if(is.list(envir) || is.pairlist(envir))
+                               parent.frame() else baseenv()) {
   params <- list(...)
   quotedExpr <- substitute(expr)
   exprString <- shortenString(deparse(quotedExpr)[[1]], 32)
@@ -84,7 +97,8 @@ twiddle <- function(expr, ..., eval = TRUE, auto = TRUE) {
   updateExpr <- function(variable, value) {
     controlValues[[variable]] <<- value
     if (eval)
-      eval.parent(eval(substitute(substitute(e, controlValues), list(e = quotedExpr))))
+      eval(eval(substitute(substitute(e, controlValues), list(e = quotedExpr))),
+           envir = envir, enclos = enclos)
   }
   
   makeTkControl <- function(k, v) { v; k$controlFactory(dlg, v, k$label, updateExpr) } # force v
@@ -93,7 +107,9 @@ twiddle <- function(expr, ..., eval = TRUE, auto = TRUE) {
   for (k in tkControls)
     tkgrid(k, columnspan = 2)
   tkEvalButton <- tkbutton(dlg, text = "Eval",
-                           command = function() eval.parent(eval(substitute(substitute(e, controlValues), list(e = quotedExpr)))))
+                           command = function() eval(eval(substitute(substitute(e, controlValues),
+                                                                     list(e = quotedExpr))),
+                                                     envir = envir, enclos = enclos))
   tkCloseButton <- tkbutton(dlg, text = "Close", command = function() tkdestroy(dlg))
   if (eval)
     tkgrid(tkCloseButton, columnspan = 2, sticky = "we", padx = c(4, 4), pady = c(16, 4))
@@ -189,6 +205,14 @@ print.twiddlerControl <- function(x, ...) {
   message(" default  = ", x$default)
   invisible(x)
 }
+
+##' Print, then directly flush the output buffer
+##'
+##' This function can be used to "print in realtime" on platforms that buffer console output,
+##' like on Windows.
+##' @param ... Passed on to \code{\link{print}}
+##' @export
+twiddle_print <- function(...) { print(...); flush.console() }
 
 ##' Find the unbound variables of an R expression
 ##'
