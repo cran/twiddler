@@ -16,7 +16,8 @@ controls. This allows easy interactive exploration of parameter spaces.}
 via \code{\link{print}}, and you are running Windows, you might need to use
 \code{\link{twiddle_print}} to see the output in realtime.}
 \value{The last values of the twiddlers as a named list.}
-\seealso{\code{\link{knob}}, \code{\link{combo}}, and \code{\link{toggle}}}
+\seealso{\code{\link{knob}}, \code{\link{combo}}, \code{\link{entry}},
+and \code{\link{toggle}}}
 \arguments{\item{expr}{The expression to manipulate through GUI controls. A control is
 automatically created for every variable in \code{expr} that is not
 bound in the caller's environment, unless \code{auto} is set to \code{FALSE}.}

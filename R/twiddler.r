@@ -53,7 +53,8 @@
 ##' twiddle(plot(rnorm(100), type=t), t=combo("p", "l", "b"))
 ##' }
 ##' 
-##' @seealso \code{\link{knob}}, \code{\link{combo}}, and \code{\link{toggle}}
+##' @seealso \code{\link{knob}}, \code{\link{combo}}, \code{\link{entry}},
+##'   and \code{\link{toggle}}
 ##' @rdname twiddler
 ##' @export
 twiddle <- function(expr, ...,
@@ -127,16 +128,28 @@ twiddle <- function(expr, ...,
 ##' @param lim A vector of two numbers, defining the lower and upper limits
 ##'   of the slider.
 ##' @param res The resolution or step size of the slider.
+##' @param default The default numeric value D for the slider.
+##'   lim[1] <= D <= lim[2] must hold.
 ##' @param label The text label of the slider.
+##' @param ticks The tick interval, defaults to \code{abs(lim[2] - lim[1]) / 4}. Set this
+##'   to \code{0} to suppress drawing of ticks altogether.
+##' @param indicator Whether to show the current value as an indicator above the
+##'   slider's handle, defaults to \code{TRUE}.
+##' @param length The length of the slider in pixels, default to \code{320}.
 ##' @return A slider \code{twiddlerControl} to be used as an argument
 ##' to \code{twiddle}.
-##' @seealso \code{\link{twiddle}} and \code{\link{toggle}}
+##' @seealso \code{\link{twiddle}}, \code{\link{combo}}, \code{\link{entry}},
+##'   and \code{\link{toggle}}
 ##' @export
-knob <- function(lim = c(0, 1), res = 0.01, label = as.character(NA))
-  structure(list(variable = as.character(NA), label = label, init = lim[1],
+knob <- function(lim = c(0, 1), res = 0.01, default = lim[1],
+                 label = as.character(NA), ticks = abs(lim[2] - lim[1]) / 4,
+                 indicator = TRUE, length = 320)
+  structure(list(variable = as.character(NA), label = label, init = default,
                  controlFactory = function(tkTop, v, l, updater) {
-                   tkscale(tkTop, from = lim[1], to = lim[2], resolution = res, length = 320,
-                           orient = "horizontal", label = l,
+                   sValue <- tclVar(default)
+                   tkscale(tkTop, variable = sValue, from = lim[1], to = lim[2],
+                           resolution = res, length = length, tickinterval = ticks,
+                           showvalue = indicator, orient = "horizontal", label = l,
                            command = function(...) updater(v, as.numeric(...)))
                  }),
             class = c("knob", "twiddlerControl"))
@@ -149,7 +162,8 @@ knob <- function(lim = c(0, 1), res = 0.01, label = as.character(NA))
 ##'   means "checked", \code{FALSE} "unchecked".
 ##' @param label The text label of the checkbox.
 ##' @return An object of class \code{twiddlerControl}.
-##' @seealso \code{\link{twiddle}} and \code{\link{knob}}
+##' @seealso \code{\link{twiddle}}, \code{\link{combo}}, \code{\link{entry}},
+##'   and \code{\link{knob}}
 ##' @export
 toggle <- function(default = FALSE, label = as.character(NA))
   structure(list(variable = as.character(NA), label = label, init = default,
@@ -168,7 +182,8 @@ toggle <- function(default = FALSE, label = as.character(NA))
 ##' @param list A list of arguments to append to the contents of ... .
 ##' @param label The text label of the combobox.
 ##' @return An object of class \code{twiddlerControl}.
-##' @seealso \code{\link{twiddle}} and \code{\link{knob}}
+##' @seealso \code{\link{twiddle}}, \code{\link{toggle}}, \code{\link{entry}},
+##'   and \code{\link{knob}}
 ##' @export
 combo <- function(..., list = NULL, label = as.character(NA)) {
   quotedExprs <- if (missing(list))
@@ -186,10 +201,49 @@ combo <- function(..., list = NULL, label = as.character(NA)) {
                    tkcurrent <- function(widget) as.numeric(tcl(widget, "current")) + 1
                    tkbind(combobox, "<<ComboboxSelected>>",
                           function() updater(v, quotedExprs[[tkcurrent(combobox)]]))
+                   controlLabel <- tklabel(tkTop, text = l)
+                   tkgrid(controlLabel, combobox)
                    combobox
                  }),
             class = c("combo", "twiddlerControl"))
 }
+
+##' Text entry field to manipulate a string variable
+##'
+##' \code{entry} creates a text entry field \code{twiddlerControl} for manipulating a
+##' string variable. The variable is updated on each keypress or when the input focus enters
+##' or leaves the text field. See the \code{eval} parameter for details.
+##' @param default The default string to display in the entry, default to \code{""}.
+##' @param label The text label of the entry.
+##' @param length The length of the entry in characters, defaults to \code{38}.
+##' @param eval When to update the string variable manipulated by this entry. Possible
+##'   values for this parameter are: \code{"key"} - update on every keystroke (the default),
+##'   \code{"focus"} - update when the entry loses focus, or
+##'   \code{"return"} - update when the return key is pressed.
+##' @return An object of class \code{twiddlerControl}.
+##' @seealso \code{\link{twiddle}}, \code{\link{toggle}}, \code{\link{combo}},
+##'   and \code{\link{knob}}
+##' @export
+entry <- function(default = "", label = as.character(NA), length = 38, eval = "key")
+  structure(list(variable = as.character(NA), label = label, init = default,
+                 controlFactory = function(tkTop, v, l, updater) {
+                   eValue <- tclVar(default)
+                   textfield <- tkentry(tkTop, textvariable = eValue, width = as.integer(length))
+                   handler <- function() updater(v, tclvalue(eValue))
+                   if ("return" == eval) {
+                     tkbind(textfield, "<Return>", handler)
+                   } else if ("focus" == eval) {
+                     tkbind(textfield, "<FocusOut>", handler)
+                   } else if ("key" == eval) {
+                     tkbind(textfield, "<KeyRelease>", handler)
+                   } else {
+                     stop("invalid value for the eval option: ", eval)
+                   }
+                   controlLabel <- tklabel(tkTop, text = l)
+                   tkgrid(controlLabel, textfield)
+                   textfield
+                 }),
+            class = c("entry", "twiddlerControl"))
 
 ##' Display information about a twiddler control
 ##' 
