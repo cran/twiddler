@@ -1,0 +1,16 @@
+d41d8cd98f00b204e9800998ecf8427e *ChangeLog
+d9f462bc3f001a14a4541f523e97f09d *DESCRIPTION
+e6317c8e298565b806ba37f23749fa4a *NAMESPACE
+742b574ad7a8bd74ac90c4a9630811ac *R/twiddler.R
+72186ea5d7db5a432ac3cb8697112f29 *inst/unittests/runit-ub.R
+64ad179c55b43c3a7f1b4ea0f0f77423 *inst/unittests/runner.r
+1efb7e5339da76de6913416a3b2055cc *man/combo.Rd
+dd0634e02126ece19dfde298c7168ab2 *man/entry.Rd
+18e6f9d9c85ba9ab838a644bcea6588f *man/filer.Rd
+336d9f4b0de9a944f6de1a7045137dab *man/knob.Rd
+7a6a3e36a570e91728ee9e4a132da9d5 *man/print-dot-twiddlerControl.Rd
+8a526b9720168263d8c1eee71ac681f9 *man/shortenString.Rd
+5c46f83320a0ac49d0baf72aedcd32d2 *man/toggle.Rd
+aa48811f32825d31e11079f4e1631fc0 *man/twiddle-sub-print.Rd
+c1d56e9a626d0538ca84616d1ed8cbf1 *man/twiddler.Rd
+54a89e4c096b1a6128dcde6b659c7fe5 *man/unboundVariables.Rd

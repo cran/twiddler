@@ -1,5 +1,6 @@
 export(twiddle)
 export(knob)
+export(filer)
 export(toggle)
 export(combo)
 export(entry)

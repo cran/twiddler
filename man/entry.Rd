@@ -8,8 +8,7 @@
 string variable. The variable is updated on each keypress or when the input focus enters
 or leaves the text field. See the \code{eval} parameter for details.}
 \value{An object of class \code{twiddlerControl}.}
-\seealso{\code{\link{twiddle}}, \code{\link{toggle}}, \code{\link{combo}},
-and \code{\link{knob}}}
+\seealso{\code{\link{twiddle}}}
 \arguments{\item{default}{The default string to display in the entry, default to \code{""}.}
 \item{label}{The text label of the entry.}
 \item{length}{The length of the entry in characters, defaults to \code{38}.}

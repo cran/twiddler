@@ -9,8 +9,7 @@
 real valued numerical variables.}
 \value{A slider \code{twiddlerControl} to be used as an argument
 to \code{twiddle}.}
-\seealso{\code{\link{twiddle}}, \code{\link{combo}}, \code{\link{entry}},
-and \code{\link{toggle}}}
+\seealso{\code{\link{twiddle}}}
 \arguments{\item{lim}{A vector of two numbers, defining the lower and upper limits
 of the slider.}
 \item{res}{The resolution or step size of the slider.}

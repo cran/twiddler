@@ -1,6 +1,6 @@
-## twiddler.r
+## twiddler.R
 ##
-## twiddleR - interactive manipulation of R expressions
+## twiddler - interactive manipulation of R expressions
 ## 2010 Oliver Flasch (oliver.flasch@fh-koeln.de)
 ## released under the GPL v2
 ##
@@ -25,6 +25,7 @@
 ##' @param auto If set to \code{FALSE}, no controls for unbound variables will
 ##'   be created automatically. Unbound variables in \code{expr} will remain
 ##'   unbound, unless explicitly bound in the \code{...} parameter.
+##' @param label The text label of twiddler dialog.
 ##' @param envir The environment in which \code{expr} is to be evaluated. May also be
 ##'   \code{NULL}, a list, a data frame, a pairlist or an integer as specified to
 ##'   \code{\link{sys.call}}.
@@ -54,17 +55,18 @@
 ##' }
 ##' 
 ##' @seealso \code{\link{knob}}, \code{\link{combo}}, \code{\link{entry}},
-##'   and \code{\link{toggle}}
+##'   \code{\link{filer}}, and \code{\link{toggle}}
 ##' @rdname twiddler
 ##' @export
 twiddle <- function(expr, ...,
-                    eval = TRUE, auto = TRUE,
+                    eval = TRUE, auto = TRUE, label = NULL,
                     envir = parent.frame(),
                     enclos = if(is.list(envir) || is.pairlist(envir))
                                parent.frame() else baseenv()) {
   params <- list(...)
   quotedExpr <- substitute(expr)
   exprString <- shortenString(deparse(quotedExpr)[[1]], 32)
+  labelText <- if (is.null(label)) exprString else label
   givenControls <- Filter(function(p) inherits(p, "twiddlerControl"), params)
   givenVars <- names(givenControls)
   unboundExprVars <- as.character(unboundVariables(quotedExpr))
@@ -74,50 +76,60 @@ twiddle <- function(expr, ...,
     names(l) <- varsWithoutControls
     l
   } else list()
-  
+ 
   controls <- c(givenControls, automaticallyCreatedControls)
-  
+ 
   if (length(controls) == 0)
     stop("no controls specified or implied")
   if (length(controls) != length(names(controls)) || any(names(controls) == ""))
     stop("every twiddlerControl must be associated with a variable")
-  
-  dlg <- tktoplevel()
-  tkwm.title(dlg, "twiddler")
-  tkwm.resizable(dlg, FALSE, FALSE)
-  tkgrid(tklabel(dlg, text = exprString, font = tkfont.create(size = 12)), columnspan = 2, pady = c(4, 0))
-  
+ 
+  topLevel <- tktoplevel()
+  mainFrame <- tkframe(topLevel)
+  tkwm.title(topLevel, "twiddler")
+  tkwm.resizable(topLevel, FALSE, FALSE)
+  tkpack(mainFrame, tklabel(mainFrame, text = labelText, font = tkfont.create(size = 12)))
+ 
   for (i in 1:length(controls)) {
     controls[[i]]$variable <- names(controls)[[i]]
     if (is.na(controls[[i]]$label)) controls[[i]]$label <- names(controls)[[i]]
   }
-  
+ 
   controlValues <- list()
-  for (k in controls) controlValues[[k$variable]] <- k$init
-  
+  for (k in controls) {
+    controlValues[[k$variable]] <- k$init
+  }
+ 
   updateExpr <- function(variable, value) {
     controlValues[[variable]] <<- value
-    if (eval)
+    if (eval) {
       eval(eval(substitute(substitute(e, controlValues), list(e = quotedExpr))),
            envir = envir, enclos = enclos)
+    }
   }
-  
-  makeTkControl <- function(k, v) { v; k$controlFactory(dlg, v, k$label, updateExpr) } # force v
+ 
+  makeTkControl <- function(k, v) { v; k$controlFactory(mainFrame, v, k$label, updateExpr) } # force v
   tkControls <- Map(makeTkControl, controls, names(controls))
-  
-  for (k in tkControls)
-    tkgrid(k, columnspan = 2)
-  tkEvalButton <- tkbutton(dlg, text = "Eval",
+  for (k in tkControls) {
+    tkpack(mainFrame, k, side = "top")
+  }
+
+  buttonFrame <- tkframe(mainFrame)
+  if (eval) {
+    closeButton <- tkbutton(buttonFrame, text = "Close", command = function() tkdestroy(topLevel))
+    tkpack(buttonFrame, closeButton, fill = "both", expand = TRUE)
+  } else {
+    evalButton <- tkbutton(buttonFrame, text = "Eval",
                            command = function() eval(eval(substitute(substitute(e, controlValues),
                                                                      list(e = quotedExpr))),
                                                      envir = envir, enclos = enclos))
-  tkCloseButton <- tkbutton(dlg, text = "Close", command = function() tkdestroy(dlg))
-  if (eval)
-    tkgrid(tkCloseButton, columnspan = 2, sticky = "we", padx = c(4, 4), pady = c(16, 4))
-  else
-    tkgrid(tkEvalButton, tkCloseButton, sticky = "we", padx = c(4, 4), pady = c(16, 4))
+    closeButton <- tkbutton(buttonFrame, text = "Close", command = function() tkdestroy(topLevel))
+    tkpack(buttonFrame, evalButton, side = "left", fill = "both", expand = TRUE)
+    tkpack(buttonFrame, closeButton, side = "right", fill = "both", expand = TRUE)
+  }
+  tkpack(mainFrame, buttonFrame, side = "top", padx = c(4, 4), pady = c(16, 4))
   
-  tkwait.window(dlg)
+  tkwait.window(topLevel)
   controlValues
 }
 
@@ -138,8 +150,7 @@ twiddle <- function(expr, ...,
 ##' @param length The length of the slider in pixels, default to \code{320}.
 ##' @return A slider \code{twiddlerControl} to be used as an argument
 ##' to \code{twiddle}.
-##' @seealso \code{\link{twiddle}}, \code{\link{combo}}, \code{\link{entry}},
-##'   and \code{\link{toggle}}
+##' @seealso \code{\link{twiddle}}
 ##' @export
 knob <- function(lim = c(0, 1), res = 0.01, default = lim[1],
                  label = as.character(NA), ticks = abs(lim[2] - lim[1]) / 4,
@@ -154,7 +165,40 @@ knob <- function(lim = c(0, 1), res = 0.01, default = lim[1],
                  }),
             class = c("knob", "twiddlerControl"))
 
-##' Checkbox to manipulate a boolean valued variable
+##' File selection dialog to manipulate a string variable denoting a filename
+##' 
+##' \code{filer} creates a file selection \code{twiddlerControl} for manipulating
+##' string variables denoting filenames.
+##' @param default The default filename for the file selection dialog.
+##' @param label The text label of the file selection dialog.
+##' @param length The length of the entry in characters, defaults to \code{38}.
+##' @return An object of class \code{twiddlerControl}.
+##' @seealso \code{\link{twiddle}}
+##' @export
+filer <- function(default = "", label = as.character(NA), length = 32)
+  structure(list(variable = as.character(NA), label = label, init = default,
+                 controlFactory = function(tkTop, v, l, updater) {
+                   controlFrame <- tkframe(tkTop, relief = "flat", borderwidth = 2)
+                   eValue <- tclVar(default)
+                   filerButton <- tkbutton(controlFrame, text = "...", command = function() {
+                     selectedFile <- tclvalue(tkgetOpenFile())
+                     if (nchar(selectedFile)) {
+                       tclvalue(eValue) <- selectedFile
+                       updater(v, tclvalue(eValue))
+                     }
+                   })
+                   textField <- tkentry(controlFrame, textvariable = eValue, width = as.integer(length))
+                   handler <- function() updater(v, tclvalue(eValue))
+                   tkbind(textField, "<Return>", handler)
+                   controlLabel <- tklabel(controlFrame, text = l)
+                   tkpack(controlFrame, controlLabel, side = "left")
+                   tkpack(controlFrame, filerButton, side = "right")
+                   tkpack(controlFrame, textField, side = "right", fill = "both", expand = TRUE)
+                   controlFrame
+                 }),
+            class = c("filer", "twiddlerControl"))
+
+##' Checkbox to manipulate a logical variable
 ##' 
 ##' \code{toggle} creates a checkbox \code{twiddlerControl} for manipulating
 ##' logical variables.
@@ -162,19 +206,18 @@ knob <- function(lim = c(0, 1), res = 0.01, default = lim[1],
 ##'   means "checked", \code{FALSE} "unchecked".
 ##' @param label The text label of the checkbox.
 ##' @return An object of class \code{twiddlerControl}.
-##' @seealso \code{\link{twiddle}}, \code{\link{combo}}, \code{\link{entry}},
-##'   and \code{\link{knob}}
+##' @seealso \code{\link{twiddle}}
 ##' @export
 toggle <- function(default = FALSE, label = as.character(NA))
   structure(list(variable = as.character(NA), label = label, init = default,
                  controlFactory = function(tkTop, v, l, updater) {
                    cbValue <- tclVar(if (default) "1" else "0")
-                   tkcheckbutton(tkTop, text = l, variable = cbValue,
+                   tkcheckbutton(tkTop, variable = cbValue, text = l,
                                  command = function() updater(v, "1" == tclvalue(cbValue)))
                  }),
             class = c("toggle", "twiddlerControl"))
 
-##' Combobox to manipulate a variable by offering a list of alternative expressions
+##' Combobox to manipulate a string variable by offering a list of alternative expressions
 ##'
 ##' \code{combo} creates a combo \code{twiddlerControl} for selecting elements from a list
 ##' of alternative expressions as substitutions for a variable.
@@ -182,8 +225,7 @@ toggle <- function(default = FALSE, label = as.character(NA))
 ##' @param list A list of arguments to append to the contents of ... .
 ##' @param label The text label of the combobox.
 ##' @return An object of class \code{twiddlerControl}.
-##' @seealso \code{\link{twiddle}}, \code{\link{toggle}}, \code{\link{entry}},
-##'   and \code{\link{knob}}
+##' @seealso \code{\link{twiddle}}
 ##' @export
 combo <- function(..., list = NULL, label = as.character(NA)) {
   quotedExprs <- if (missing(list))
@@ -194,16 +236,18 @@ combo <- function(..., list = NULL, label = as.character(NA)) {
   exprStrings <- sapply(as.character(quotedExprs), function(s) shortenString(s, 32))
   structure(list(variable = as.character(NA), label = label, init = quotedExprs[[1]],
                  controlFactory = function(tkTop, v, l, updater) {
+                   controlFrame <- tkframe(tkTop, relief = "flat", borderwidth = 2)
                    selection <- tclVar()
                    tclvalue(selection) <- exprStrings[[1]]
-                   combobox <- ttkcombobox(tkTop, values = exprStrings,
+                   combobox <- ttkcombobox(controlFrame, values = exprStrings,
                                            state = "readonly", textvariable = selection)
                    tkcurrent <- function(widget) as.numeric(tcl(widget, "current")) + 1
                    tkbind(combobox, "<<ComboboxSelected>>",
                           function() updater(v, quotedExprs[[tkcurrent(combobox)]]))
-                   controlLabel <- tklabel(tkTop, text = l)
-                   tkgrid(controlLabel, combobox)
-                   combobox
+                   controlLabel <- tklabel(controlFrame, text = l)
+                   tkpack(controlFrame, controlLabel, side = "left")
+                   tkpack(controlFrame, combobox, side = "right", fill = "both", expand = TRUE)
+                   controlFrame
                  }),
             class = c("combo", "twiddlerControl"))
 }
@@ -221,27 +265,28 @@ combo <- function(..., list = NULL, label = as.character(NA)) {
 ##'   \code{"focus"} - update when the entry loses focus, or
 ##'   \code{"return"} - update when the return key is pressed.
 ##' @return An object of class \code{twiddlerControl}.
-##' @seealso \code{\link{twiddle}}, \code{\link{toggle}}, \code{\link{combo}},
-##'   and \code{\link{knob}}
+##' @seealso \code{\link{twiddle}}
 ##' @export
 entry <- function(default = "", label = as.character(NA), length = 38, eval = "key")
   structure(list(variable = as.character(NA), label = label, init = default,
                  controlFactory = function(tkTop, v, l, updater) {
+                   controlFrame <- tkframe(tkTop, relief = "flat", borderwidth = 2)
                    eValue <- tclVar(default)
-                   textfield <- tkentry(tkTop, textvariable = eValue, width = as.integer(length))
+                   textField <- tkentry(controlFrame, textvariable = eValue, width = as.integer(length))
                    handler <- function() updater(v, tclvalue(eValue))
                    if ("return" == eval) {
-                     tkbind(textfield, "<Return>", handler)
+                     tkbind(textField, "<Return>", handler)
                    } else if ("focus" == eval) {
-                     tkbind(textfield, "<FocusOut>", handler)
+                     tkbind(textField, "<FocusOut>", handler)
                    } else if ("key" == eval) {
-                     tkbind(textfield, "<KeyRelease>", handler)
+                     tkbind(textField, "<KeyRelease>", handler)
                    } else {
                      stop("invalid value for the eval option: ", eval)
                    }
-                   controlLabel <- tklabel(tkTop, text = l)
-                   tkgrid(controlLabel, textfield)
-                   textfield
+                   controlLabel <- tklabel(controlFrame, text = l)
+                   tkpack(controlFrame, controlLabel, side = "left")
+                   tkpack(controlFrame, textField, side = "right", fill = "both", expand = TRUE)
+                   controlFrame
                  }),
             class = c("entry", "twiddlerControl"))
 

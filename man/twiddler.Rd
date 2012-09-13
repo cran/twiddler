@@ -1,7 +1,7 @@
 \name{twiddler}
 \alias{twiddle}
 \title{Interactive manipulation of R expressions...}
-\usage{twiddle(expr, ..., eval=TRUE, auto=TRUE, envir=parent.frame(), enclos=if
+\usage{twiddle(expr, ..., eval=TRUE, auto=TRUE, label, envir=parent.frame(), enclos=if
     (is.list(envir) || is.pairlist(envir)) parent.frame() else
     baseenv())
 }
@@ -17,7 +17,7 @@ via \code{\link{print}}, and you are running Windows, you might need to use
 \code{\link{twiddle_print}} to see the output in realtime.}
 \value{The last values of the twiddlers as a named list.}
 \seealso{\code{\link{knob}}, \code{\link{combo}}, \code{\link{entry}},
-and \code{\link{toggle}}}
+\code{\link{filer}}, and \code{\link{toggle}}}
 \arguments{\item{expr}{The expression to manipulate through GUI controls. A control is
 automatically created for every variable in \code{expr} that is not
 bound in the caller's environment, unless \code{auto} is set to \code{FALSE}.}
@@ -27,6 +27,7 @@ added to the GUI to trigger manual evaluation.}
 \item{auto}{If set to \code{FALSE}, no controls for unbound variables will
 be created automatically. Unbound variables in \code{expr} will remain
 unbound, unless explicitly bound in the \code{...} parameter.}
+\item{label}{The text label of twiddler dialog.}
 \item{envir}{The environment in which \code{expr} is to be evaluated. May also be
 \code{NULL}, a list, a data frame, a pairlist or an integer as specified to
 \code{\link{sys.call}}.}
