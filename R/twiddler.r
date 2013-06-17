@@ -86,8 +86,6 @@ twiddle <- function(expr, ...,
  
   topLevel <- tktoplevel()
   mainFrame <- tkframe(topLevel)
-  tkwm.title(topLevel, "twiddler")
-  tkwm.resizable(topLevel, FALSE, FALSE)
   tkpack(mainFrame, tklabel(mainFrame, text = labelText, font = tkfont.create(size = 12)))
  
   for (i in 1:length(controls)) {
@@ -128,7 +126,10 @@ twiddle <- function(expr, ...,
     tkpack(buttonFrame, closeButton, side = "right", fill = "both", expand = TRUE)
   }
   tkpack(mainFrame, buttonFrame, side = "top", padx = c(4, 4), pady = c(16, 4))
-  
+ 
+  tkwm.title(topLevel, "twiddler")
+  tkwm.resizable(topLevel, FALSE, FALSE)
+ 
   tkwait.window(topLevel)
   controlValues
 }
